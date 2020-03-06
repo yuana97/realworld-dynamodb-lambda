@@ -1,11 +1,14 @@
 service: realworld
 
 provider:
+  # aws provider with node runtime in useast1 region
   name: aws
   runtime: nodejs8.10
   region: us-east-1
+  # set dd namespace env var
   environment:
     DYNAMODB_NAMESPACE: ${opt:stage, "dev"}
+  # allow ddb actions against the 
   iamRoleStatements:
     - Effect: Allow
       Action:
@@ -17,6 +20,7 @@ provider:
         - dynamodb:DeleteItem
       Resource: "arn:aws:dynamodb:${opt:region, self:provider.region}:*:table/*"
 
+# dont package excluded files
 package:
   exclude:
     - test/**
@@ -24,6 +28,7 @@ package:
     - lambda-node-logo.png
     - .nyc_output/**
 
+# include ddb local and serverless offline plugins
 plugins:
   - serverless-dynamodb-local
   - serverless-offline
@@ -31,6 +36,7 @@ plugins:
 functions:
 
   ## Users API
+  # createUser lambda handles posts to /api/users using the handler src/User.create
   createUser:
     handler: src/User.create
     events:
@@ -39,6 +45,7 @@ functions:
           path: /api/users
           cors: true
 
+  # loginUser lambda handles posts to /api/users/login with src/User.login handler
   loginUser:
     handler: src/User.login
     events:
@@ -47,6 +54,7 @@ functions:
           path: /api/users/login
           cors: true
 
+  # getUser lambda handles gets to /api/user with src/User.get handler.
   getUser:
     handler: src/User.get
     events:
@@ -55,6 +63,7 @@ functions:
           path: /api/user
           cors: true
 
+  # put to /api/user => updateUser
   updateUser:
     handler: src/User.update
     events:
@@ -63,6 +72,7 @@ functions:
           path: /api/user
           cors: true
 
+  # get to /api/profile/{username} => getProfile
   getProfile:
     handler: src/User.getProfile
     events:
@@ -71,6 +81,7 @@ functions:
           path: /api/profiles/{username}
           cors: true
 
+  # post to /api/profiles/{username}/follow => followUser handler
   followUser:
     handler: src/User.follow
     events:
@@ -79,6 +90,7 @@ functions:
           path: /api/profiles/{username}/follow
           cors: true
 
+  # delete to /api/profiles/{username}/follow => unfollow handler
   unfollowUser:
     handler: src/User.follow
     events:
@@ -88,6 +100,7 @@ functions:
           cors: true
 
   ## Articles API
+  # post to /api/articles => createArticle handler
   createArticle:
     handler: src/Article.create
     events:
@@ -96,6 +109,7 @@ functions:
           path: /api/articles
           cors: true
 
+  # get to /api/articles/slug => getArticle handler
   getArticle:
     handler: src/Article.get
     events:
@@ -104,6 +118,8 @@ functions:
           path: /api/articles/{slug}
           cors: true
 
+  # put to /api/articles/slug => updateArticle handler
+  # put is idempotent: doesnt create new resource
   udpateArticle:
     handler: src/Article.update
     events:
@@ -112,6 +128,7 @@ functions:
           path: /api/articles/{slug}
           cors: true
 
+  # delete to /api/articles/{slug} => fire deleteArticle handler
   deleteArticle:
     handler: src/Article.delete
     events:
@@ -120,6 +137,7 @@ functions:
           path: /api/articles/{slug}
           cors: true
 
+  # post to /api/articles/{slug}/favorite => fire favoriteArticle handler
   favoriteArticle:
     handler: src/Article.favorite
     events:
@@ -128,6 +146,7 @@ functions:
           path: /api/articles/{slug}/favorite
           cors: true
 
+  # delete to /api/articles/{slug}/favorite => use article.favorite handler
   unfavoriteArticle:
     handler: src/Article.favorite
     events:
@@ -136,6 +155,7 @@ functions:
           path: /api/articles/{slug}/favorite
           cors: true
 
+  # get to /api/articles => use Article.list handler
   listArticles:
     handler: src/Article.list
     events:
@@ -144,6 +164,7 @@ functions:
           path: /api/articles
           cors: true
 
+  # get to /api/articles/feed with Article.getFeed handler.
   getArticlesFeed:
     handler: src/Article.getFeed
     events:
@@ -152,6 +173,7 @@ functions:
           path: /api/articles/feed
           cors: true
 
+  # get to /api/tags => use Article.getTags handler
   getTags:
     handler: src/Article.getTags
     events:
@@ -161,6 +183,7 @@ functions:
           cors: true
 
   ## Comments API
+  # post to /api/articles/{slug}/comments => use Comment.create handler
   createComment:
     handler: src/Comment.create
     events:
@@ -169,6 +192,7 @@ functions:
           path: /api/articles/{slug}/comments
           cors: true
 
+  # get to /api/articles/{slug}/comments => use Comment.get handler
   getComments:
     handler: src/Comment.get
     events:
@@ -177,6 +201,7 @@ functions:
           path: /api/articles/{slug}/comments
           cors: true
 
+  # delete to /api/articles/{slug}/comments/{id} => use Comment.delete handler
   deleteComment:
     handler: src/Comment.delete
     events:
@@ -202,6 +227,7 @@ functions:
 resources:
   Resources:
 
+    # create userddb resource with username, email keyed by email.
     UsersDynamoDBTable:
       Type: 'AWS::DynamoDB::Table'
       DeletionPolicy: Retain
@@ -234,6 +260,7 @@ resources:
               ReadCapacityUnits: 1
               WriteCapacityUnits: 1
 
+    # 
     ArticlesDynamoDBTable:
       Type: 'AWS::DynamoDB::Table'
       DeletionPolicy: Retain

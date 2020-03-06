@@ -13,6 +13,7 @@
   "scripts": {
     "lint": "eslint src/ test/",
     "test": "npm run lint && ./test-api-local.sh",
+    "//": "start script runs start-server.sh",
     "start": "./start-server.sh",
     "stop": "./stop-server.sh",
     "deploy": "serverless deploy",
