@@ -51,6 +51,7 @@ module.exports = {
 
 };
 
+// envelop a result obj with status and headers
 function envelop(res, statusCode = 200) {
   let body;
   if (statusCode == 200) {
@@ -58,6 +59,7 @@ function envelop(res, statusCode = 200) {
   } else {
     body = JSON.stringify({ errors: { body: [res] } }, null, 2);
   }
+  // return body with statuscode and headers
   return {
     statusCode,
     headers: {

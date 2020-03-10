@@ -260,7 +260,7 @@ resources:
               ReadCapacityUnits: 1
               WriteCapacityUnits: 1
 
-    # 
+    # create articles ddb table with slug => slug, dummy, updatedAt
     ArticlesDynamoDBTable:
       Type: 'AWS::DynamoDB::Table'
       DeletionPolicy: Retain
@@ -282,6 +282,7 @@ resources:
         ProvisionedThroughput:
           ReadCapacityUnits: 1
           WriteCapacityUnits: 1
+          # name realworld-<ddbnamespace>-article
         TableName: realworld-${self:provider.environment.DYNAMODB_NAMESPACE}-articles
         GlobalSecondaryIndexes:
           -
@@ -298,11 +299,12 @@ resources:
             ProvisionedThroughput:
               ReadCapacityUnits: 1
               WriteCapacityUnits: 1
-
+    # comments table: 
     CommentsDynamoDBTable:
       Type: 'AWS::DynamoDB::Table'
       DeletionPolicy: Retain
       Properties:
+        # id maps to id, slug
         AttributeDefinitions:
           -
             AttributeName: id
@@ -320,6 +322,7 @@ resources:
         TableName: realworld-${self:provider.environment.DYNAMODB_NAMESPACE}-comments
         GlobalSecondaryIndexes:
           -
+            # secondary index by article: keyed by slug
             IndexName: article
             KeySchema:
               -

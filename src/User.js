@@ -9,9 +9,12 @@ const jwt = require('jsonwebtoken');
 module.exports = {
 
   /** Create user */
+  // create user handler
   async create(event) {
+    // parse body from event
     const body = JSON.parse(event.body);
 
+    // error if fields are missing
     if (!body.user) {
       return Util.envelop('User must be specified.', 422);
     }
@@ -27,18 +30,21 @@ module.exports = {
     }
 
     // Verify username is not taken
+    // username taken => error
     const userWithThisUsername = await getUserByUsername(newUser.username);
     if (userWithThisUsername.Item) {
       return Util.envelop(`Username already taken: [${newUser.username}]`, 422);
     }
 
     // Verify email is not taken
+    // verify email not taken with ddb query
     const userWithThisEmail = await getUserByEmail(newUser.email);
     if (userWithThisEmail.Count !== 0) {
       return Util.envelop(`Email already taken: [${newUser.email}]`, 422);
     }
 
     // Add new entry to usersTable
+    // encrypt password, put user obj in ddb (username, email, password)
     const encryptedPassword = bcrypt.hashSync(newUser.password, 5);
     await Util.DocumentClient.put({
       TableName: usersTable,
@@ -48,7 +54,7 @@ module.exports = {
         password: encryptedPassword,
       },
     }).promise();
-
+    // 
     return Util.envelop({
       user: {
         email: newUser.email,
@@ -61,7 +67,9 @@ module.exports = {
   },
 
   /** Login user */
+  // login user
   async login(event) {
+    // parse body from event
     const body = JSON.parse(event.body);
     if (!body.user) {
       return Util.envelop('User must be specified.', 422);
@@ -75,17 +83,20 @@ module.exports = {
     }
 
     // Get user with this email
+    // get user from email
     const userWithThisEmail = await getUserByEmail(user.email);
     if (userWithThisEmail.Count !== 1) {
       return Util.envelop(`Email not found: [${user.email}]`, 422);
     }
 
     // Attempt to match password
+    // compare password with user.Items[o]'s password
     if (!bcrypt.compareSync(user.password,
         userWithThisEmail.Items[0].password)) {
       return Util.envelop('Wrong password.', 422);
     }
 
+    // attach new token to user obj
     const authenticatedUser = {
       email: user.email,
       token: mintToken(userWithThisEmail.Items[0].username),
@@ -98,10 +109,13 @@ module.exports = {
 
   /** Get user */
   async get(event) {
+    // get user from event
+    // parse out ahtneticated user from event
     const authenticatedUser = await authenticateAndGetUser(event);
     if (!authenticatedUser) {
       return Util.envelop('Token not present or invalid.', 422);
     }
+    // return profile obj of authenticateduser
     return Util.envelop({
       user: {
         email: authenticatedUser.email,
@@ -114,16 +128,20 @@ module.exports = {
   },
 
   /** Update user */
+  // update user
   async update(event) {
+    // get user from event
     const authenticatedUser = await authenticateAndGetUser(event);
     if (!authenticatedUser) {
       return Util.envelop('Token not present or invalid.', 422);
     }
+    // parse body from event, user from body
     const body = JSON.parse(event.body);
     const user = body.user;
     if (!user) {
       return Util.envelop('User must be specified.', 422);
     }
+    // update user with fields from user
     const updatedUser = {
       username: authenticatedUser.username,
     };
@@ -144,7 +162,7 @@ module.exports = {
     if (user.bio) {
       updatedUser.bio = user.bio;
     }
-
+    // put mutated user in ddb
     await Util.DocumentClient.put({
       TableName: usersTable,
       Item: updatedUser,
@@ -164,7 +182,7 @@ module.exports = {
       updatedUser.bio = authenticatedUser.bio || '';
     }
     updatedUser.token = getTokenFromEvent(event);
-
+    // return updated user
     return Util.envelop({
       user: updatedUser,
     });
@@ -174,7 +192,9 @@ module.exports = {
   authenticateAndGetUser,
   getUserByUsername,
 
+  // get profile event handler
   async getProfile(event) {
+    // get username from pathparams, 
     const username = event.pathParameters.username;
     const authenticatedUser =
       await authenticateAndGetUser(event);
@@ -296,6 +316,7 @@ function getUserByUsername(aUsername) {
   }).promise();
 }
 
+// extract token from header
 function getTokenFromEvent(event) {
   return event.headers.Authorization.replace('Token ', '');
 }
@@ -321,11 +342,16 @@ async function getProfileByUsername(aUsername, aAuthenticatedUser) {
   return profile;
 }
 
+// authenticates user and returns user
 async function authenticateAndGetUser(event) {
   try {
+    // get token from event
     const token = getTokenFromEvent(event);
+    // decode token with secret
     const decoded = jwt.verify(token, Util.tokenSecret);
+    // get username
     const username = decoded.username;
+    // get user from username and return as ddb item
     const authenticatedUser = await getUserByUsername(username);
     return authenticatedUser.Item;
   } catch (err) {
